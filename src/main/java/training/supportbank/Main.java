@@ -7,7 +7,12 @@ import java.util.*;
 
 import com.opencsv.CSVReaderHeaderAware;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+
 public class Main {
+
     public static void main(String args[]) throws FileNotFoundException, IOException {
 
         List<Transactions> allTransactions = addTransactions(); //creates list of all transactions
@@ -26,6 +31,8 @@ public class Main {
 
     }  
 
+    private static final Logger LOGGER = LogManager.getLogger();
+
     public static Accounts validateAccount(String accountName, List<Accounts> allAccounts){
         Accounts blankAccount = null;
         for (int i = 0; i < allAccounts.size(); i++){
@@ -35,7 +42,6 @@ public class Main {
             }
         }
         return blankAccount;
-
     }
 
 
@@ -88,8 +94,9 @@ public class Main {
         for (int i = 0;i < allTransactions.size(); i++){ //goes through transaction list and searches for account names
             String sender = allTransactions.get(i).getSender();
             if(!allAccountNames.contains(sender)){ //if account name is "new", creates new account and adds it to account list
-                allAccountNames.add(sender);
-                allAccounts.add(new Accounts(sender));
+                allAccountNames.add(sender); //adds name to names list
+                allAccounts.add(new Accounts(sender)); //creates new account under unique name
+                LOGGER.debug("Created account with name: " + sender);
             }
         }
         return allAccounts;
@@ -111,14 +118,26 @@ public class Main {
 
     public static List<Transactions> addTransactions() throws IOException{ //adds all transactions to the transaction class and then adds them to a list of all transaction
         List<Transactions> transactionsList = new ArrayList<>();
-        String strFile = "C:\\Users\\9558bw\\OneDrive - BP\\Documents\\SupportBank\\Transactions2014.csv";
-        CSVReaderHeaderAware reader = new CSVReaderHeaderAware(new FileReader(strFile));
-        while(true){
-            Map <String,String> values = reader.readMap();
-            if(values == null){
-                break;
+        List<String> strFiles = new ArrayList<>();
+        strFiles.add("C:\\Users\\9558bw\\OneDrive - BP\\Documents\\SupportBank\\Transactions2014.csv");
+        strFiles.add("C:\\Users\\9558bw\\OneDrive - BP\\Documents\\SupportBank\\DodgyTransactions2015.csv");
+        for (String file : strFiles){
+            CSVReaderHeaderAware reader = new CSVReaderHeaderAware(new FileReader(file));
+            while(true){
+                Map <String,String> values = reader.readMap();
+                if(values == null){
+                    break;
+                }
+                try{
+                    transactionsList.add(new Transactions(values.get("Date"),values.get("From"),values.get("To"),Float.parseFloat(values.get("Amount")),values.get("Narrative")));
+                    LOGGER.debug("created account " + transactionsList.get(transactionsList.size()-1));
+                }catch(NumberFormatException e){
+                    LOGGER.debug("Transaction creation failed  Reason: " + e);
+                    System.out.println("Transaction creation failed, skipping account and storing transaction details in log file.");
+                    LOGGER.debug ("Transaction: " + values);
+                }
+                
             }
-            transactionsList.add(new Transactions(values.get("Date"),values.get("From"),values.get("To"),Float.parseFloat(values.get("Amount")),values.get("Narrative")));
         }
         return transactionsList;
     }
